@@ -20,7 +20,9 @@ async function main() {
   process.on("SIGTERM", () => void shutdown("SIGTERM"));
 
   try {
-    await app.listen({ host: config.API_HOST, port: config.API_PORT });
+    // Hosts like Railway/Render inject $PORT; prefer it over the configured port.
+    const port = process.env.PORT ? Number(process.env.PORT) : config.API_PORT;
+    await app.listen({ host: config.API_HOST, port });
   } catch (err) {
     app.log.error(err);
     process.exit(1);
