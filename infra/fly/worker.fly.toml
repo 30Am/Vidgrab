@@ -1,0 +1,19 @@
+# Fly.io config for the VidGrab worker pool.
+# Runs yt-dlp + ffmpeg; autoscale on queue depth. No public HTTP service.
+# Deploy: fly deploy -c infra/fly/worker.fly.toml --dockerfile apps/worker/Dockerfile
+app = "vidgrab-worker"
+primary_region = "iad"
+
+[build]
+  dockerfile = "../../apps/worker/Dockerfile"
+
+[env]
+  WORKER_CONCURRENCY = "4"
+  YTDLP_AUTO_UPDATE = "true"
+
+# No [http_service] — workers pull from the queue. Scale with:
+#   fly scale count 3 -c infra/fly/worker.fly.toml
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 2
+  memory_mb = 2048

@@ -1,0 +1,12 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# Force a single ioredis version so BullMQ accepts our Redis instances
+# (bullmq pulls 5.10.x; we use 5.11.x — the dual copy breaks structural typing).
+overrides:
+  ioredis: "5.11.0"
+allowBuilds:
+  esbuild: true
+  msgpackr-extract: true
+  sharp: true

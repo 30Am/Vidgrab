@@ -1,0 +1,156 @@
+# VidGrab — single-host internal deployment.
+# Runs the whole stack behind a Caddy reverse proxy (TLS + HTTP basic auth).
+# Only Caddy is published to the host; everything else is on the internal network.
+#
+# Run from the repo root:
+#   docker compose --env-file infra/.env.prod -f infra/docker-compose.prod.yml up -d --build
+name: vidgrab-prod
+
+x-app-env: &app-env
+  env_file:
+    - .env.prod
+
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - api
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Baked into the client bundle — must be the public URL teammates use.
+        NEXT_PUBLIC_API_BASE_URL: ${PUBLIC_BASE_URL}
+    image: vidgrab-web:latest
+    restart: unless-stopped
+    expose:
+      - "3000"
+    depends_on:
+      - api
+
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    image: vidgrab-api:latest
+    restart: unless-stopped
+    <<: *app-env
+    expose:
+      - "4000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ..
+      dockerfile: apps/worker/Dockerfile
+    image: vidgrab-worker:latest
+    restart: unless-stopped
+    <<: *app-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  cleanup-worker:
+    image: vidgrab-worker:latest
+    restart: unless-stopped
+    command: ["node", "dist/cleanup.js"]
+    <<: *app-env
+    depends_on:
+      worker:
+        condition: service_started
+
+  # One-shot: applies Drizzle migrations, then exits.
+  migrate:
+    image: vidgrab-api:latest
+    command: ["node", "node_modules/@vidgrab/db/dist/migrate.js"]
+    <<: *app-env
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-vidgrab}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-vidgrab}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vidgrab}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: ["server", "/data"]
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY}
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Creates the private bucket (no anonymous access — the API streams files).
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${S3_ACCESS_KEY_ID} ${S3_SECRET_ACCESS_KEY} &&
+      mc mb --ignore-existing local/${S3_BUCKET:-vidgrab-downloads} &&
+      echo 'bucket ready (private)';
+      "
+    restart: "no"
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:
+  caddy_data:
+  caddy_config:

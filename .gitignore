@@ -1,0 +1,34 @@
+node_modules/
+dist/
+.next/
+out/
+build/
+
+# env
+.env
+.env.local
+.env.*.local
+.env.prod
+infra/.env.prod
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# os
+.DS_Store
+
+# temp downloads
+tmp/
+*.part
+*.ytdl
+
+# drizzle
+packages/db/drizzle/meta/_journal.json.bak
+
+# coverage / test
+coverage/
+
+# tsc incremental build info
+*.tsbuildinfo

@@ -1,0 +1,38 @@
+# VidGrab internal reverse proxy.
+# - Automatic HTTPS (Let's Encrypt) for a real {$DOMAIN}; internal self-signed
+#   cert when DOMAIN=localhost (use curl -k to test).
+# - HTTP basic auth gate in front of EVERYTHING (web, API, downloads, thumbnails).
+# - Routes /api/* to the API service; all other paths to the Next.js web app.
+#
+# Env (provided via the caddy container's env_file):
+#   DOMAIN, ACME_EMAIL, BASIC_AUTH_USER, BASIC_AUTH_HASH (bcrypt, from `caddy hash-password`)
+
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	# One login protects the whole tool. Generate the hash with:
+	#   docker run --rm caddy caddy hash-password --plaintext 'yourpassword'
+	basic_auth {
+		{$BASIC_AUTH_USER} {$BASIC_AUTH_HASH}
+	}
+
+	# API (probe, jobs, download streaming, thumbnail proxy).
+	@api path /api/*
+	handle @api {
+		reverse_proxy api:4000
+	}
+
+	# Everything else → the web frontend.
+	handle {
+		reverse_proxy web:3000
+	}
+
+	# Allow large streamed downloads / long-running requests.
+	request_body {
+		max_size 1MB
+	}
+
+	encode zstd gzip
+}

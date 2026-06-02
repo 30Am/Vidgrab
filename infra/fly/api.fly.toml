@@ -1,0 +1,25 @@
+# Fly.io config for the VidGrab API service.
+# Deploy: fly deploy -c infra/fly/api.fly.toml --dockerfile apps/api/Dockerfile
+app = "vidgrab-api"
+primary_region = "iad"
+
+[build]
+  dockerfile = "../../apps/api/Dockerfile"
+
+[http_service]
+  internal_port = 4000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[http_service.checks]]
+  method = "GET"
+  path = "/api/health"
+  interval = "15s"
+  timeout = "5s"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512

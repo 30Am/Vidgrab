@@ -1,0 +1,32 @@
+{
+  "name": "@vidgrab/worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/worker.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node --env-file-if-exists=../../.env dist/worker.js",
+    "start:cleanup": "node --env-file-if-exists=../../.env dist/cleanup.js",
+    "dev": "tsx watch --env-file-if-exists=../../.env src/worker.ts",
+    "dev:cleanup": "tsx watch --env-file-if-exists=../../.env src/cleanup.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.717.0",
+    "@aws-sdk/lib-storage": "^3.717.0",
+    "@aws-sdk/s3-request-presigner": "^3.717.0",
+    "@vidgrab/db": "workspace:*",
+    "@vidgrab/queue": "workspace:*",
+    "@vidgrab/shared": "workspace:*",
+    "bullmq": "^5.34.5",
+    "drizzle-orm": "^0.38.3",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
