@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+# Opt JS actions into the Node 24 runtime (Node 20 is deprecated on runners).
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: ubuntu-latest

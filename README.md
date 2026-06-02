@@ -1,8 +1,13 @@
 # VidGrab
 
-Public, ad-free video downloader for **YouTube** and **Instagram**. Paste a link, pick a
+[![CI](https://github.com/30Am/Vidgrab/actions/workflows/ci.yml/badge.svg)](https://github.com/30Am/Vidgrab/actions/workflows/ci.yml)
+
+Ad-free video downloader for **YouTube** and **Instagram**. Paste a link, pick a
 format, download the file — video, merged video+audio, or audio-only — in the highest
 quality the source offers.
+
+> **Deploying it?** See [DEPLOY.md](DEPLOY.md) for the single-host, password-protected
+> internal setup (TLS + HTTP basic auth via Caddy, everything in Docker Compose).
 
 This repo implements the architecture in `VidGrab_Architecture.docx`: a pnpm monorepo with
 a Next.js frontend, a stateless Fastify API, a Redis/BullMQ job queue, and an autoscalable
